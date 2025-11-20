@@ -43,11 +43,11 @@ int main(void) {
     char name[TEXT_SIZE] = "";
     char text[TEXT_SIZE] = "";
     char respuesta[TEXT_SIZE] = "";
-    int update_id = 0;
-    int next_offset = 0;
-    int chat_id = 0;
+    long long int update_id = 0;
+    long long int next_offset = 0;
+    long long int chat_id = 0;
     int indice = 0;
-    long int date = 0;
+    long long int date = 0;
     const char *frases[NUM_FRASES] = {
         "Mi%20CPU%20se%20acaba%20de%20tomar%20un%20descanso.%20Podrias%20repetirlo%20mas%20lento.",
         "Eso%20no%20esta%20en%20mis%20scripts%20de%20sabidura.%20Prueba%20con%20algo%20mas%20terrenal.",
@@ -80,8 +80,8 @@ int main(void) {
         fclose(file);
     }
 
-    char *api_url = "https://api.telegram.org/bot%s/getUpdates?offset=%d";
-    char *sent_url = "https://api.telegram.org/bot%s/sendMessage?chat_id=%d&text=%s";
+    char *api_url = "https://api.telegram.org/bot%s/getUpdates?offset=%lld";
+    char *sent_url = "https://api.telegram.org/bot%s/sendMessage?chat_id=%lld&text=%s";
 
     CURL *curl = curl_easy_init();
 
@@ -99,20 +99,21 @@ int main(void) {
             char *up_id = strstr(chunk.response, "\"update_id\":");
             if (up_id != NULL) {
                 up_id += strlen("\"update_id\":");
-                sscanf(up_id, "%d", &update_id);
+                sscanf(up_id, "%lld", &update_id);
                 next_offset = update_id + 1;
                 printf("%s\n", chunk.response);
 
                 char *ch_id = strstr(chunk.response, "\"chat\":{\"id\":");
                 if (ch_id != NULL) {
                     ch_id += strlen("\"chat\":{\"id\":");
-                    sscanf(ch_id, "%d", &chat_id);
+                    sscanf(ch_id, "%lld", &chat_id);
                 }
+
 
                 char *dt = strstr(chunk.response, "\"date\":");
                 if (dt != NULL) {
                     dt += strlen("\"date\":");
-                    sscanf(dt, "%ld", &date);
+                    sscanf(dt, "%lld", &date);
                 }
 
                 char *nm = strstr(chunk.response, "\"first_name\":\"");
@@ -153,8 +154,11 @@ int main(void) {
                 printf("");
             }
 
+            if (chunk.response) {
+                    free(chunk.response);
+                    chunk.response = NULL;
+            }
         }
-
         sleep(2);
     }
 }
@@ -162,7 +166,7 @@ int main(void) {
 void log_message(long timestamp, char *name, char *respuesta) {
     FILE *logs = fopen(LOG_FILE, "a");
     if (logs == NULL) {
-        printf("\nError:No se pudieron cagar los logs.");
+        printf("\nError:No se pudieron cargar los logs.");
         return;
     }
     fprintf(logs, "[%ld][%s]: %s\n", timestamp, name, respuesta);
