@@ -28,8 +28,10 @@ int main(void) {
 
     char token[TOKEN_SIZE] = "";
     char get_url[URL_SIZE] = "";
+    char post_url[URL_SIZE] = "";
     int update_id = 0;
     int next_offset = 0;
+    int chat_id = 0;
 
     FILE *file;
     file = fopen("env.txt", "r");
@@ -41,6 +43,7 @@ int main(void) {
     }
 
     char *api_url = "https://api.telegram.org/bot%s/getUpdates?offset=%d";
+    char *sent_url = "https://api.telegram.org/bot%s/sendMessage?chat_id=%d&text=Hola";
 
     CURL *curl = curl_easy_init();
 
@@ -60,9 +63,26 @@ int main(void) {
                 sscanf(up_id, "%d", &update_id);
                 next_offset = update_id + 1;
                 printf("%s\n", chunk.response);
+
+                char *ch_id = strstr(chunk.response, "\"from\":{\"id\":");
+                if (ch_id != NULL) {
+                    ch_id += strlen("\"from\":{\"id\":");
+                    sscanf(ch_id, "%d", &chat_id);
+                    printf("%d", chat_id);
+                }
+
+                snprintf(post_url, URL_SIZE, sent_url, token, chat_id);
+
+                curl_easy_setopt(curl, CURLOPT_URL, post_url);
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+                curl_easy_perform(curl);
+
             }else {
                 printf(".");
             }
+
         }
 
         sleep(2);
