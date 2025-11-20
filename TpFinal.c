@@ -9,6 +9,12 @@
 #define URL_SIZE 2000
 #define TEXT_SIZE 500
 #define NUM_FRASES 20
+#define LOG_FILE "logs.txt"
+
+//https://github.com/BolanhoAlejo/TPIntegradorInfo1
+
+void log_message(long timestamp, char *name, char *respuesta);
+void limpiar_texto(char *texto);
 
 struct memory {
     char *response;
@@ -41,6 +47,7 @@ int main(void) {
     int next_offset = 0;
     int chat_id = 0;
     int indice = 0;
+    long int date = 0;
     const char *frases[NUM_FRASES] = {
         "Mi%20CPU%20se%20acaba%20de%20tomar%20un%20descanso.%20Podrias%20repetirlo%20mas%20lento.",
         "Eso%20no%20esta%20en%20mis%20scripts%20de%20sabidura.%20Prueba%20con%20algo%20mas%20terrenal.",
@@ -50,7 +57,7 @@ int main(void) {
         "Disculpa%20creo%20que%20mi%20respuesta%20se%20perdio%20en%20un%20bucle%20temporal.%20",
         "Esa%20frase%20suena%20a%20idioma%20aliengena.%20Podras%20traducirla%20al%20espaniol%20terricola.",
         "Error%20404%20Respuesta%20relevante%20no%20encontrada.%20Intenta%20otra%20cosa.",
-        "Si%20lo%20que%20dijiste%20es%20importante%20dimelo%20otra%20vez.%20Si%20es%20sobre%20el%20clima%20olvdalo.",
+        "Si%20lo%20que%20dijiste%20es%20importante%20dimelo%20otra%20vez.%20Si%20es%20sobre%20el%20clima%20olvidalo.",
         "Mi%20programador%20olvido%20enseniarme%20eso.%20Que%20vergenza.",
         "Lo%20leo%20lo%20proceso%20y%20mi%20unica%20respuesta%20es%20Que.",
         "Estoy%20seguro%20de%20que%20eres%20interesante%20pero%20mi%20codigo%20dice%20que%20no%20te%20entiendo.%20",
@@ -88,6 +95,7 @@ int main(void) {
 
             CURLcode res = curl_easy_perform(curl);
 
+
             char *up_id = strstr(chunk.response, "\"update_id\":");
             if (up_id != NULL) {
                 up_id += strlen("\"update_id\":");
@@ -101,17 +109,26 @@ int main(void) {
                     sscanf(ch_id, "%d", &chat_id);
                 }
 
+                char *dt = strstr(chunk.response, "\"date\":");
+                if (dt != NULL) {
+                    dt += strlen("\"date\":");
+                    sscanf(dt, "%ld", &date);
+                }
+
                 char *nm = strstr(chunk.response, "\"first_name\":\"");
                 if (nm != NULL) {
                     nm += strlen("\"first_name\":\"");
-                    sscanf(nm, "%s", &name);
+                    sscanf(nm, "%s", name);
                 }
 
                 char *tx = strstr(chunk.response, "\"text\":\"");
                 if (tx != NULL) {
                     tx += strlen("\"text\":\"");
-                    sscanf(tx, "%s", text);
+                    sscanf(tx, "%[^\"]", text);
                 }
+
+                limpiar_texto(text);
+                log_message(date, name, text);
 
                 if (strstr(text, "hola")!=NULL || strstr(text, "Hola")!=NULL) {
                     snprintf(respuesta, sizeof(respuesta), "Hola,%%20%s", name);
@@ -129,12 +146,33 @@ int main(void) {
 
                 curl_easy_perform(curl);
 
+                limpiar_texto(respuesta);
+                log_message(date, "Bot", respuesta);
+
             }else {
-                printf(".");
+                printf("");
             }
 
         }
 
         sleep(2);
+    }
+}
+
+void log_message(long timestamp, char *name, char *respuesta) {
+    FILE *logs = fopen(LOG_FILE, "a");
+    if (logs == NULL) {
+        printf("\nError:No se pudieron cagar los logs.");
+        return;
+    }
+    fprintf(logs, "[%ld][%s]: %s\n", timestamp, name, respuesta);
+    fclose(logs);
+}
+
+void limpiar_texto(char *texto) {
+    char *text;
+    while ((text = strstr(texto, "%20"))!= NULL) {
+        *text = ' ';
+        memmove(text+1, text+3, strlen(text+3)+1);
     }
 }
